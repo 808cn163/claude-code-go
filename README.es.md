@@ -254,8 +254,6 @@ export OPENAI_BASE_URL=https://api.orcarouter.ai/v1
 export OPENAI_MODEL=orcarouter/auto   # deja que OrcaRouter elija el modelo para cada petición
 ```
 
-*(El enlace de arriba es un enlace de referido.)*
-
 ## Uso
 
 ### Modo interactivo
