@@ -256,8 +256,6 @@ export OPENAI_BASE_URL=https://api.orcarouter.ai/v1
 export OPENAI_MODEL=orcarouter/auto   # OrcaRouter がリクエストごとにモデルを選択
 ```
 
-*（上のリンクはリファラルリンクです。）*
-
 ## 使用方法
 
 ### インタラクティブモード

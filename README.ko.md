@@ -254,8 +254,6 @@ export OPENAI_BASE_URL=https://api.orcarouter.ai/v1
 export OPENAI_MODEL=orcarouter/auto   # OrcaRouter가 요청마다 모델을 선택
 ```
 
-*(위 링크는 추천인(referral) 링크입니다.)*
-
 ## 사용법
 
 ### 대화형 모드

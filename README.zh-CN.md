@@ -254,8 +254,6 @@ export OPENAI_BASE_URL=https://api.orcarouter.ai/v1
 export OPENAI_MODEL=orcarouter/auto   # 让 OrcaRouter 为每个请求挑选模型
 ```
 
-*（上面的链接是推广（referral）链接。）*
-
 ## 使用说明
 
 ### 交互模式
