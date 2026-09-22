@@ -165,7 +165,7 @@ claude auth status   # 查看当前登录身份
 
 Claude Code Go 支持多种 API 提供商，不仅可以使用 Anthropic 的 API，还可以使用 OpenAI 兼容的 API。
 
-### 支持的提供商
+### 支持的提供商(`CLAUDE_PROVIDER=openai`)
 
 | 提供商 | 说明 | 环境变量 |
 |--------|------|----------|
@@ -173,6 +173,20 @@ Claude Code Go 支持多种 API 提供商，不仅可以使用 Anthropic 的 API
 | `openai` | OpenAI 及兼容 API | `OPENAI_API_KEY`、`OPENAI_BASE_URL` |
 | `bedrock` | AWS Bedrock | 通过环境变量设置 AWS 凭证 |
 | `vertex` | Google Cloud Vertex AI | 通过环境变量设置 GCP 凭证 |
+
+### 使用 Anthropic 兼容端点（中转/自建）
+
+使用第三方中转或自建的 Anthropic 协议端点（需提供 `/v1/messages`）时，**不要**设置 `CLAUDE_PROVIDER=openai`——那会改走 OpenAI 协议分支。保持默认的 `direct` 即可：
+
+```bash
+export ANTHROPIC_BASE_URL=https://your-endpoint.com   # 末尾不要带斜杠
+export ANTHROPIC_API_KEY=your-key
+# export ANTHROPIC_MODEL=claude-sonnet-5              # 可选
+```
+
+- provider 取值为 `direct`（默认，走 Anthropic 协议）/`openai`/`bedrock`/`vertex`/`foundry`，没有 `anthropic`。
+- 若只设置 `OPENAI_API_KEY` 而未设置 `ANTHROPIC_API_KEY`，provider 会被**自动改为 `openai`**，请显式设置 `ANTHROPIC_API_KEY`。
+- 本项目仅以 `x-api-key` 头发送密钥，不支持 `Authorization: Bearer`；`ANTHROPIC_CUSTOM_HEADERS` 亦未实现。
 
 ### 使用 OpenAI 兼容 API
 
@@ -441,6 +455,59 @@ claude-code-go/
 ## 安全
 
 如需报告安全漏洞，请参阅 [SECURITY.md](SECURITY.md)。**请勿**在公开的 GitHub Issue 中披露安全问题。
+
+## 相对上游 Claude Code 的限制调整
+
+本项目对官方 Claude Code 的限制移除做法，提供了对应的**机制层放宽开关**。
+
+### 对照 ClawGod 审计
+
+ClawGod 1.8.0 从官方 Claude Code 中移除 4 项限制。逐条比对本项目后的结论：
+
+| ClawGod 移除项 | 本项目情况 | 说明 |
+|---|---|---|
+| CYBER_RISK（安全测试拒绝策略） | 无提示词层对应，有机制层对应 | 本项目**没有 base system prompt**（交互模式的 system prompt 仅由 CLAUDE.md 构成），故不存在该提示词。机制层对应物是危险命令拦截表 |
+| URL 生成限制 | **不存在** | 全仓库无 `You must NEVER generate or guess URLs` 类文本 |
+| Cautious Actions（操作前强制确认） | 无提示词层对应，有机制层对应 | 机制层对应物是权限管线的 `Ask` 决策 |
+| Not logged in 横幅 | **无等价物** | 仅有 `internal/bootstrap/auth.go` 的认证失败错误提示，性质不同（见下方「未改动项」） |
+
+> 换言之：本项目以**代码机制*的形式实现了约束。因此本项目的对应处理是放宽机制，而非删除文本。
+
+### 放宽开关
+
+| 项 | 内容 |
+|---|---|
+| 开关名 | `CLAUDE_CODE_RELAXED_LIMITS` |
+| 取值 | `1` / `true` / `yes` / `on`（由 `pkg/utils/env.IsEnvTruthy` 判定） |
+| 定义位置 | `internal/config/relaxed.go` → `RelaxedLimitsEnabled()`（全项目唯一判定入口） |
+| 默认值 | **关闭**。未设置时所有行为与改动前**完全一致**，现有安全姿态不变 |
+
+启用方式：
+
+```bash
+export CLAUDE_CODE_RELAXED_LIMITS=1
+claude
+```
+
+### 开关开启后的变化
+
+| 文件 | 改动点 | 效果 |
+|------|--------|------|
+| `internal/tools/shell/security.go` | `AnalyzeCommand()` 入口条件提前返回 `nil` | `sudo`、`rm -rf`、`mkfs`、`dd of=/dev/`、`curl \| sh` 等不再被拦截 |
+| `internal/permissions/checker.go` | `CanUseTool()` 单点把 `Ask` 降级为 `Allow` | 破坏性操作不再弹出确认提示 |
+
+**关键边界**：只降级 `Ask`，**从不**降级 `Deny`。显式 deny 规则、validate/hook 拒绝、plan 模式的写入拦截、工具自身的拒绝，在开关开启时依然生效——该开关**无法**用来绕过一次明确的拒绝。
+
+实现上的两点克制：
+
+- 降级集中在 `CanUseTool()` **唯一一处**，而不是散落在产生 `Ask` 的各分支里，避免后续新增分支时遗漏。
+- `dangerousCommandPatterns` 拦截表**未被修改**，仅在其入口增加条件提前返回；关闭开关即完整恢复原行为。
+
+### 为什么默认关闭
+
+1. 放宽安全限制应是**显式选择**，而非升级后的默认后果。
+2. 本项目的默认行为有 CI 红线约束（`make test`、`make debt-check`），默认放宽会使既有测试与既有安全契约失效。
+3. 开关化后，同一份代码可按环境切换姿态，无需维护分支。
 
 ## 许可证
 
