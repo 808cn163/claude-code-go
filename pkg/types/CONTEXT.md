@@ -175,3 +175,16 @@ type MCPConnection interface {
 
 <!-- AUTO-GENERATED ABOVE — DO NOT EDIT -->
 <!-- MANUAL NOTES BELOW — preserved across regeneration -->
+
+## Design Notes
+
+- **`ContentBlock.MarshalJSON` 是为兼容严格网关而存在的，不要当作冗余代码删掉**：`Input`
+  字段带 `omitempty`，当它为 nil 或空 map 时会把 `input` 整个省略。Messages 协议要求
+  `tool_use.input` 是 JSON **对象**（非 null、更非缺失），而部分第三方网关（`ANTHROPIC_BASE_URL`
+  中转，Rust + serde 反序列化）会因字段缺失直接返回 422 `missing field "input"`。
+  故对 tool_use 单独构造，令 input 恒为对象；其余类型的块仍走默认序列化，
+  避免给 text / tool_result / thinking 等块凭空添加 input 字段。
+- **`tool_result.content` 与 `thinking.signature` 未做同样处理**：前者在所有构造路径上
+  都至少带一个 text 块（`internal/engine/orchestration.go`），数组非空，`omitempty`
+  不会省略；后者来自上游响应，缺失时补空串反而会被判为无效签名。
+- 回归测试见 `message_test.go`；`pkg/types` 是零依赖包，只允许使用标准库。

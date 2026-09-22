@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/tunsuy/claude-code-go/internal/tools"
-	"github.com/tunsuy/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/internal/tools"
+	"github.com/808cn163/claude-code-go/pkg/types"
 )
 
 // StopHookContext carries the context available to stop hooks after a turn ends.

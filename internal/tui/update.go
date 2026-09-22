@@ -4,10 +4,10 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/tunsuy/claude-code-go/internal/commands"
-	"github.com/tunsuy/claude-code-go/internal/memdir"
-	"github.com/tunsuy/claude-code-go/internal/msgqueue"
-	"github.com/tunsuy/claude-code-go/internal/state"
+	"github.com/808cn163/claude-code-go/internal/commands"
+	"github.com/808cn163/claude-code-go/internal/memdir"
+	"github.com/808cn163/claude-code-go/internal/msgqueue"
+	"github.com/808cn163/claude-code-go/internal/state"
 )
 
 // Update is the BubbleTea Update method — the single message dispatcher.
@@ -159,7 +159,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.streamCh = nil
 		m.streamingText = ""
 		m.streamingHasMsg = false
-		errText := "Error: " + msg.Err.Error()
+		errText := "错误：" + msg.Err.Error()
 		m.messages = append(m.messages, newSystemMessage(errText))
 		m.syncViewportContent()
 		return m, nil
@@ -247,16 +247,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// --- Compact done ---
 	case CompactDoneMsg:
-		m.messages = append(m.messages, newSystemMessage("Conversation compacted: "+msg.Summary))
+		m.messages = append(m.messages, newSystemMessage("会话已压缩："+msg.Summary))
 		m.activeDialog = dialogNone
 		m.syncViewportContent()
 		return m, nil
 
 	case DreamDoneMsg:
 		if msg.Err != "" {
-			m.messages = append(m.messages, newSystemMessage("Dream consolidation failed: "+msg.Err))
+			m.messages = append(m.messages, newSystemMessage("记忆整理失败："+msg.Err))
 		} else {
-			m.messages = append(m.messages, newSystemMessage("Dream consolidation completed."))
+			m.messages = append(m.messages, newSystemMessage("记忆整理已完成。"))
 		}
 		m.syncViewportContent()
 		return m, nil
@@ -296,7 +296,7 @@ func (m AppModel) handleSlashCommand(text string) (AppModel, tea.Cmd) {
 
 	slashCmd := m.commandRegistry.Lookup(name)
 	if slashCmd == nil {
-		m.messages = append(m.messages, newSystemMessage("Unknown command: /"+name))
+		m.messages = append(m.messages, newSystemMessage("未知命令：/"+name))
 		m.syncViewportContent()
 		return m, nil
 	}
@@ -357,7 +357,7 @@ func (m AppModel) applyCommandResult(result commands.Result, name string) (AppMo
 			m.theme = t
 			m.darkMode = result.NewTheme != "light"
 		} else {
-			m.messages = append(m.messages, newSystemMessage("Unknown theme: "+result.NewTheme))
+			m.messages = append(m.messages, newSystemMessage("未知主题："+result.NewTheme))
 			m.syncViewportContent()
 			return m, nil
 		}
@@ -414,7 +414,7 @@ func (m AppModel) applyCommandResult(result commands.Result, name string) (AppMo
 		}
 	case commands.DisplayError:
 		if result.Text != "" {
-			m.messages = append(m.messages, newSystemMessage("Error: "+result.Text))
+			m.messages = append(m.messages, newSystemMessage("错误："+result.Text))
 			m.syncViewportContent()
 		}
 	case commands.DisplayNone:

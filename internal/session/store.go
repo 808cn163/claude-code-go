@@ -12,9 +12,9 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"github.com/tunsuy/claude-code-go/pkg/types"
-	"github.com/tunsuy/claude-code-go/pkg/utils/ids"
-	utilfs "github.com/tunsuy/claude-code-go/pkg/utils/fs"
+	"github.com/808cn163/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/pkg/utils/ids"
+	utilfs "github.com/808cn163/claude-code-go/pkg/utils/fs"
 )
 
 // ---------------------------------------------------------------------------

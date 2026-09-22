@@ -8,7 +8,7 @@ package compact
 import (
 	"context"
 
-	"github.com/tunsuy/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/pkg/types"
 )
 
 // Compressor is the unified interface for context compaction.

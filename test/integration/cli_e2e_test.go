@@ -16,8 +16,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/tunsuy/claude-code-go/internal/api"
-	"github.com/tunsuy/claude-code-go/internal/bootstrap"
+	"github.com/808cn163/claude-code-go/internal/api"
+	"github.com/808cn163/claude-code-go/internal/bootstrap"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

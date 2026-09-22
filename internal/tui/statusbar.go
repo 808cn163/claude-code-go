@@ -45,7 +45,7 @@ func (s StatusBar) View(width int, theme Theme) string {
 	)
 	if s.coordinator {
 		left = left + mutedStyle(theme).Render(" | ") +
-			accentStyle(theme).Render("Coordinator")
+			accentStyle(theme).Render("协调者")
 	}
 
 	// Show effort level with icon

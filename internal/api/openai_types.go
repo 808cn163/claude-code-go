@@ -55,8 +55,10 @@ type openaiFunction struct {
 }
 
 // openaiToolCall represents a tool call made by the model.
+// Index 只出现在流式响应的 delta 中（用于区分并行工具调用），
+// 请求体的 tool_calls 不含该字段，故带 omitempty 以免污染请求。
 type openaiToolCall struct {
-	Index    int                    `json:"index"`
+	Index    int                    `json:"index,omitempty"`
 	ID       string                 `json:"id"`
 	Type     string                 `json:"type"` // always "function"
 	Function openaiToolCallFunction `json:"function"`

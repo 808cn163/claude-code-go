@@ -3,7 +3,7 @@ package permission_test
 import (
 	"testing"
 
-	"github.com/tunsuy/claude-code-go/pkg/utils/permission"
+	"github.com/808cn163/claude-code-go/pkg/utils/permission"
 )
 
 func TestMatchToolRule(t *testing.T) {

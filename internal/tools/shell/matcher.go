@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tunsuy/claude-code-go/internal/tools"
+	"github.com/808cn163/claude-code-go/internal/tools"
 )
 
 // PreparePermissionMatcher returns a matcher that tests whether a permission

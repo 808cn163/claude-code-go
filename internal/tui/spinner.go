@@ -25,7 +25,7 @@ type SpinnerModel struct {
 func newSpinner() SpinnerModel {
 	return SpinnerModel{
 		frames: spinnerFrames,
-		verb:   "Thinking",
+		verb:   "思考中",
 	}
 }
 

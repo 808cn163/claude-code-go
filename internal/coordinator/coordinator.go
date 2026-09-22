@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tunsuy/claude-code-go/pkg/utils/ids"
+	"github.com/808cn163/claude-code-go/pkg/utils/ids"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

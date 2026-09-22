@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/tunsuy/claude-code-go/internal/session"
-	"github.com/tunsuy/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/internal/session"
+	"github.com/808cn163/claude-code-go/pkg/types"
 )
 
 // TestSessionStore_AppendAndReadAll verifies round-trip serialisation: entries

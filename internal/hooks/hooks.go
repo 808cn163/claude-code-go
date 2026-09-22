@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/tunsuy/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/pkg/types"
 )
 
 const defaultTimeoutMs = 10_000 // 10 s

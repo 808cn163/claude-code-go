@@ -3,9 +3,9 @@ package permissions
 import (
 	"fmt"
 
-	"github.com/tunsuy/claude-code-go/internal/config"
-	"github.com/tunsuy/claude-code-go/internal/tools"
-	"github.com/tunsuy/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/internal/config"
+	"github.com/808cn163/claude-code-go/internal/tools"
+	"github.com/808cn163/claude-code-go/pkg/types"
 )
 
 // PersistConfig wires the checker to the on-disk settings that hold its rules.

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tunsuy/claude-code-go/internal/config"
+	"github.com/808cn163/claude-code-go/internal/config"
 )
 
 // RunE bodies for the `claude plugin` subcommands (enable/disable/update and

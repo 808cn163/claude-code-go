@@ -11,6 +11,12 @@ import (
 // This should be kept in sync with bootstrap.appVersion.
 const appVersion = "0.1.0"
 
+// productName 是产品中文名。
+const productName = "Claude Code 网络安全专用版"
+
+// productVersion 是产品展示版本号。
+const productVersion = "1.0"
+
 // WelcomeHeader contains data for the startup welcome banner.
 type WelcomeHeader struct {
 	version string
@@ -43,10 +49,10 @@ func (w WelcomeHeader) IsShown() bool {
 // View renders the welcome header banner.
 // Format:
 //
-//	Claude Code Go v0.1.0
-//	claude-sonnet-4-20250514 · API Usage Billing
+//	Claude Code 网络安全专用版 V1.0
+//	claude-sonnet-4-20250514 · API 计费
 //	~/path/to/cwd
-//	Welcome to Claude Code Go!  /effort to tune speed vs. intelligence
+//	欢迎使用 Claude Code 网络安全专用版！  /effort 调节速度与智能的权衡
 func (w WelcomeHeader) View(width int, theme Theme) string {
 	if w.shown {
 		return ""
@@ -54,11 +60,12 @@ func (w WelcomeHeader) View(width int, theme Theme) string {
 
 	var sb strings.Builder
 
-	// ASCII art logo (cute face without ears - cleaner look)
+	// Claude Code 官方图标（ASCII 艺术字）
 	logo := renderLogo(theme)
 
-	// Version line
-	versionLine := primaryStyle(theme).Bold(true).Render(fmt.Sprintf("Claude Code Go v%s", w.version))
+	// 版本行（产品中文名 + 展示版本号）
+	versionLine := primaryStyle(theme).Bold(true).Render(
+		fmt.Sprintf("%s V%s", productName, productVersion))
 
 	// Model + billing info
 	modelStr := w.model
@@ -69,7 +76,7 @@ func (w WelcomeHeader) View(width int, theme Theme) string {
 		lipgloss.Left,
 		secondaryStyle(theme).Render(modelStr),
 		mutedStyle(theme).Render(" · "),
-		mutedStyle(theme).Render("API Usage Billing"),
+		mutedStyle(theme).Render("API 计费"),
 	)
 
 	// Working directory
@@ -78,27 +85,26 @@ func (w WelcomeHeader) View(width int, theme Theme) string {
 	// Welcome message
 	welcomeLine := lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		successStyle(theme).Render("Welcome to Claude Code Go!"),
+		successStyle(theme).Render("欢迎使用 Claude Code 网络安全专用版！"),
 		mutedStyle(theme).Render("  "),
 		accentStyle(theme).Render("/effort"),
-		mutedStyle(theme).Render(" to tune speed vs. intelligence"),
+		mutedStyle(theme).Render(" 调节速度与智能的权衡"),
 	)
 
-	// Combine info lines vertically
+	// 标题 / 模型 / 工作目录三行与 logo 顶部对齐（logo 恰好 3 行）
 	infoBlock := lipgloss.JoinVertical(
 		lipgloss.Left,
 		versionLine,
 		modelLine,
 		cwdLine,
-		welcomeLine,
 	)
 
-	// Join logo and info horizontally with center alignment
-	banner := lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		logo,
-		"  ",
-		infoBlock,
+	// 欢迎语单独置于横幅下方：若并入 infoBlock 会使其变成 4 行，
+	// 导致 3 行的 logo 被居中后与标题行错开。
+	banner := lipgloss.JoinVertical(
+		lipgloss.Left,
+		lipgloss.JoinHorizontal(lipgloss.Top, logo, "  ", infoBlock),
+		welcomeLine,
 	)
 
 	sb.WriteString(banner)
@@ -107,28 +113,28 @@ func (w WelcomeHeader) View(width int, theme Theme) string {
 	return sb.String()
 }
 
-// renderLogo renders the ASCII art logo without ears for a cleaner look.
-func renderLogo(theme Theme) string {
-	// ASCII art - removed the ears (\_/) for cleaner appearance
+// renderLogo 渲染 Claude Code 官方图标的 ASCII 艺术字。
+// 恒为天蓝色，不随主题变化。注意：每一行开头的空格用于图案左右对齐，必须原样保留。
+func renderLogo(_ Theme) string {
+	// Claude Code 官方图标，精确 3 行
 	logoLines := []string{
-		"  (•‿•) ",
-		" /|░░░|\\",
-		"( |░░░| )",
-		"  \"^ ^\" ",
+		" ▐▛███▜▌",
+		"▝▜█████▛▘",
+		"  ▘▘ ▝▝",
 	}
 
-	// Use cyan/teal color for Go Gopher
-	gopherColor := lipgloss.Color("#00ADD8") // Go's official cyan color
-	logoStyle := lipgloss.NewStyle().
-		Foreground(gopherColor).
-		Bold(true)
+	// 固定为蓝色，直接输出 ANSI 转义序列而非走 lipgloss 样式：lipgloss 会依据
+	// termenv 探测到的终端色阶做降级，而该探测在 WSL / SSH / 容器环境下常把终端
+	// 误判为低色阶，把蓝色降级成亮青（深色背景上近似白色）。
+	// 34 为标准蓝、94 为亮蓝，按需替换即可。
+	const logoColor = "\x1b[94m"
+	const logoReset = "\x1b[0m"
 
-	var rendered []string
+	rendered := make([]string, 0, len(logoLines))
 	for _, line := range logoLines {
-		rendered = append(rendered, logoStyle.Render(line))
+		rendered = append(rendered, logoColor+line+logoReset)
 	}
-
-	return lipgloss.JoinVertical(lipgloss.Left, rendered...)
+	return strings.Join(rendered, "\n")
 }
 
 // shortenPath shortens a path for display, replacing home dir with ~.

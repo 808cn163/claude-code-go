@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/glamour/ansi"
-	"github.com/tunsuy/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/pkg/types"
 )
 
 // BLACK_CIRCLE is the bullet used for tool indicators.
@@ -281,7 +281,7 @@ func renderSystemMessage(msg types.Message, theme Theme) string {
 	var sb strings.Builder
 	for _, blk := range msg.Content {
 		if blk.Type == types.ContentTypeText && blk.Text != nil {
-			sb.WriteString(mutedStyle(theme).Render("System: "+*blk.Text) + "\n")
+			sb.WriteString(mutedStyle(theme).Render("系统："+*blk.Text) + "\n")
 		}
 	}
 	return sb.String()
@@ -299,12 +299,12 @@ func renderThinkingBlock(text string, theme Theme) string {
 	}
 	prefix := mutedStyle(theme).Render("  ▸ ")
 	var sb strings.Builder
-	sb.WriteString(mutedStyle(theme).Render("Thinking:\n"))
+	sb.WriteString(mutedStyle(theme).Render("思考中：\n"))
 	for _, l := range visible {
 		sb.WriteString(prefix + mutedStyle(theme).Render(l) + "\n")
 	}
 	if truncated {
-		sb.WriteString(mutedStyle(theme).Render("  … (truncated)\n"))
+		sb.WriteString(mutedStyle(theme).Render("  … （已截断）\n"))
 	}
 	return sb.String()
 }
@@ -481,7 +481,7 @@ func renderToolResultBlock(blk types.ContentBlock, theme Theme, expanded bool) s
 			// Show truncation indicator if not expanded
 			if !expanded && len(lines) > maxVisibleLines {
 				remaining := len(lines) - maxVisibleLines
-				hint := mutedStyle(theme).Render("… +" + itoa(remaining) + " lines (ctrl+o to expand)")
+				hint := mutedStyle(theme).Render("… 还有 " + itoa(remaining) + " 行（ctrl+o 展开）")
 				sb.WriteString(hint)
 				sb.WriteString("\n")
 			}

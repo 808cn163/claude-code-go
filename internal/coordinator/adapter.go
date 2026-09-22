@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/tunsuy/claude-code-go/internal/tools"
+	"github.com/808cn163/claude-code-go/internal/tools"
 )
 
 // Compile-time assertion: coordinatorAdapter implements tools.AgentCoordinator.

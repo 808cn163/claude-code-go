@@ -1,16 +1,16 @@
 package bootstrap
 
 import (
-	"github.com/tunsuy/claude-code-go/internal/tools"
-	"github.com/tunsuy/claude-code-go/internal/tools/agent"
-	"github.com/tunsuy/claude-code-go/internal/tools/fileops"
-	"github.com/tunsuy/claude-code-go/internal/tools/interact"
-	"github.com/tunsuy/claude-code-go/internal/tools/mcp"
-	"github.com/tunsuy/claude-code-go/internal/tools/memory"
-	"github.com/tunsuy/claude-code-go/internal/tools/misc"
-	"github.com/tunsuy/claude-code-go/internal/tools/shell"
-	"github.com/tunsuy/claude-code-go/internal/tools/tasks"
-	"github.com/tunsuy/claude-code-go/internal/tools/web"
+	"github.com/808cn163/claude-code-go/internal/tools"
+	"github.com/808cn163/claude-code-go/internal/tools/agent"
+	"github.com/808cn163/claude-code-go/internal/tools/fileops"
+	"github.com/808cn163/claude-code-go/internal/tools/interact"
+	"github.com/808cn163/claude-code-go/internal/tools/mcp"
+	"github.com/808cn163/claude-code-go/internal/tools/memory"
+	"github.com/808cn163/claude-code-go/internal/tools/misc"
+	"github.com/808cn163/claude-code-go/internal/tools/shell"
+	"github.com/808cn163/claude-code-go/internal/tools/tasks"
+	"github.com/808cn163/claude-code-go/internal/tools/web"
 )
 
 // RegisterBuiltinTools registers all built-in tool singletons into reg.

@@ -10,9 +10,9 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/tunsuy/claude-code-go/internal/engine"
-	"github.com/tunsuy/claude-code-go/internal/tools"
-	"github.com/tunsuy/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/internal/engine"
+	"github.com/808cn163/claude-code-go/internal/tools"
+	"github.com/808cn163/claude-code-go/pkg/types"
 )
 
 // collectHeadlessPrompt builds the prompt string for -p mode.

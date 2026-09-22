@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"github.com/tunsuy/claude-code-go/internal/tui"
+	"github.com/808cn163/claude-code-go/internal/tui"
 )
 
 // rootFlags groups all flags declared on the root cobra command.
@@ -232,7 +232,9 @@ func runInteractive(f *rootFlags, opts ContainerOptions) error {
 		container.QueryGuard,
 		container.MemoryStore,
 	)
-	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	// 刻意不启用 tea.WithMouseCellMotion()：启用鼠标追踪会让终端把鼠标事件
+	// 全部转发给程序，用户就无法用鼠标拖选界面文字进行复制。滚动改由 PgUp/PgDn 承担。
+	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("tui: %w", err)
 	}

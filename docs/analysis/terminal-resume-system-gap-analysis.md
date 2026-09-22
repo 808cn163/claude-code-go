@@ -867,8 +867,8 @@ import (
     "os"
     "time"
 
-    "github.com/tunsuy/claude-code-go/internal/lifecycle"
-    "github.com/tunsuy/claude-code-go/internal/session"
+    "github.com/808cn163/claude-code-go/internal/lifecycle"
+    "github.com/808cn163/claude-code-go/internal/session"
 )
 
 // GracefulShutdown executes the 6-step ordered shutdown pipeline.
@@ -909,7 +909,7 @@ func GracefulShutdown(container *AppContainer, exitCode int) {
 // internal/session/recovery.go
 package session
 
-import "github.com/tunsuy/claude-code-go/pkg/types"
+import "github.com/808cn163/claude-code-go/pkg/types"
 
 // InterruptState describes how a prior session ended.
 type InterruptState int
@@ -1002,7 +1002,7 @@ func RunCleanupFunctions() {
 // internal/session/chain.go
 package session
 
-import "github.com/tunsuy/claude-code-go/pkg/types"
+import "github.com/808cn163/claude-code-go/pkg/types"
 
 // BuildConversationChain traverses the parentUuid DAG from the leaf entry
 // to the root, returning entries in root→leaf order.

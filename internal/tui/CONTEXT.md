@@ -85,3 +85,21 @@ source_files: [agentcolors.go, cmds.go, coordinator.go, init.go, input.go, keys.
 
 <!-- AUTO-GENERATED ABOVE — DO NOT EDIT -->
 <!-- MANUAL NOTES BELOW — preserved across regeneration -->
+
+## Design Notes
+
+- **输入框占位符必须以 ASCII 字符开头**（当前值 `[输入消息…]`）。bubbles v0.20.0 的
+  `textarea.placeholderView()` 用 `plines[0][0]`（**字节索引**）取占位符首字符，再做
+  `string(byte)` 转换；若首字符是多字节 UTF-8（如中文「输」E8 BE 93），会被拆成乱码
+  （`è` + 0xBE + U+0093）。首字符为 ASCII 即可完全规避该上游缺陷，其后的中文均正常。
+  用户实际**输入**的中文不受影响（只有占位符走这条渲染路径）。升级 bubbles 后请重测。
+- **刻意不在 `bootstrap/root.go` 启用 `tea.WithMouseCellMotion()`**：启用鼠标追踪会让终端
+  把鼠标事件全部转发给程序，用户就无法用鼠标拖选界面文字进行复制（终端原生选择失效）。
+  滚动改由 PgUp/PgDn 承担；`keys.go` 的 `handleMouse` 保留以便将来需要时可恢复。
+- **欢迎横幅 logo 与信息块顶部对齐**（`JoinHorizontal(lipgloss.Top, ...)`）：logo 为 3 行，
+  若把欢迎语并入 `infoBlock` 会使其变成 4 行，`JoinHorizontal(lipgloss.Center)` 会把 logo
+  挤得比标题行低半行，故欢迎语单独置于横幅下方。
+- **logo 的蓝色是手写 ANSI 序列，不是笔误**：`renderLogo` 刻意不走 lipgloss 样式，而是
+  直接拼 `"\x1b[94m"`（亮蓝；换成 `34` 即标准蓝）。原因是 lipgloss 会依据 termenv 探测到的
+  终端色阶做降级，而该探测在 WSL / SSH / 容器环境下常把终端误判为低色阶，把蓝色降级成
+  亮青（bright cyan，深色背景上肉眼近似白色）。手写序列可绕过这层降级，直接把色码交给终端。

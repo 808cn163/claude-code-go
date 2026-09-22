@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tunsuy/claude-code-go/internal/memdir"
+	"github.com/808cn163/claude-code-go/internal/memdir"
 )
 
 // --- MemoryAge ---

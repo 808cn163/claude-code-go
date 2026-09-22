@@ -846,3 +846,167 @@ func TestOpenAIMessageConversion(t *testing.T) {
 		})
 	}
 }
+
+// TestOpenAIMessageConversion_ToolResultBeforeText 验证同一条消息内，
+// tool_result 转换出的 role=tool 消息必须排在文本之前；否则会被 role=user 隔断，
+// 破坏「role=tool 必须紧跟 assistant(tool_calls)」的协议约束。
+func TestOpenAIMessageConversion_ToolResultBeforeText(t *testing.T) {
+	t.Parallel()
+
+	client := &openaiClient{}
+	// 刻意把 text 放在 tool_result 之前，转换后应被重排。
+	msg := MessageParam{
+		Role:    "user",
+		Content: json.RawMessage(`[{"type":"text","text":"继续"},{"type":"tool_result","tool_use_id":"call_1","content":"工具结果"}]`),
+	}
+
+	got := client.convertMessage(msg)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 messages, got %d", len(got))
+	}
+	if got[0].Role != "tool" {
+		t.Errorf("tool_result 应排在前面，got role=%q", got[0].Role)
+	}
+	if got[1].Role != "user" {
+		t.Errorf("文本应排在后面，got role=%q", got[1].Role)
+	}
+}
+
+// TestOpenAIMessageConversion_DropsThinking 验证 thinking 块不会被回传给 OpenAI：
+// Chat Completions 协议没有对应概念，回传会污染上下文并产生连续的 assistant 消息。
+func TestOpenAIMessageConversion_DropsThinking(t *testing.T) {
+	t.Parallel()
+
+	client := &openaiClient{}
+
+	// 有正文时：只输出正文，不额外产生 thinking 消息。
+	withText := client.convertMessage(MessageParam{
+		Role:    "assistant",
+		Content: json.RawMessage(`[{"type":"thinking","thinking":"先分析"},{"type":"text","text":"答案是 42"}]`),
+	})
+	if len(withText) != 1 {
+		t.Fatalf("thinking 不应产生额外消息，got %d 条", len(withText))
+	}
+	if withText[0].Content == nil || *withText[0].Content != "答案是 42" {
+		t.Errorf("content 应为正文，got %v", withText[0].Content)
+	}
+
+	// 仅有 thinking 时：不输出任何消息。
+	onlyThinking := client.convertMessage(MessageParam{
+		Role:    "assistant",
+		Content: json.RawMessage(`[{"type":"thinking","thinking":"只有思考"}]`),
+	})
+	if len(onlyThinking) != 0 {
+		t.Errorf("仅有 thinking 时不应产生消息，got %d 条", len(onlyThinking))
+	}
+}
+
+// TestOpenAIRequestOmitsToolCallIndex 验证请求体的 tool_calls 不含 index 字段：
+// index 只属于流式响应的 delta，出现在请求里会被严格实现拒绝。
+func TestOpenAIRequestOmitsToolCallIndex(t *testing.T) {
+	t.Parallel()
+
+	client := &openaiClient{}
+	req := &MessageRequest{
+		Model:     "gpt-4",
+		MaxTokens: 100,
+		Messages: []MessageParam{
+			{
+				Role:    "assistant",
+				Content: json.RawMessage(`[{"type":"tool_use","id":"call_1","name":"Read","input":{"path":"/a"}},{"type":"tool_use","id":"call_2","name":"Write","input":{"path":"/b"}}]`),
+			},
+		},
+	}
+
+	body, err := json.Marshal(client.convertToOpenAIRequest(req))
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(string(body), `"index"`) {
+		t.Errorf("请求体的 tool_calls 不应包含 index 字段: %s", body)
+	}
+}
+
+// TestOpenAIClientStreamParallelToolCalls 验证同一个 delta 中携带的多个 tool_call
+// 都会被转换成 content_block_start（并行工具调用不能丢失），
+// 且同一个 content block 不会被 stop 两次。
+func TestOpenAIClientStreamParallelToolCalls(t *testing.T) {
+	sseData := `data: {"id":"chatcmpl-789","object":"chat.completion.chunk","created":1,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"call_a","type":"function","function":{"name":"Read","arguments":""}},{"index":1,"id":"call_b","type":"function","function":{"name":"Write","arguments":""}}]},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-789","object":"chat.completion.chunk","created":1,"model":"gpt-4","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"path\":\"/a\"}"}},{"index":1,"function":{"arguments":"{\"path\":\"/b\"}"}}]},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-789","object":"chat.completion.chunk","created":1,"model":"gpt-4","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
+
+data: [DONE]
+
+`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte(sseData))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(ClientConfig{
+		Provider: ProviderOpenAI,
+		APIKey:   "test-key",
+		BaseURL:  server.URL,
+	}, nil)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	reader, err := client.Stream(context.Background(), &MessageRequest{
+		Model:     "gpt-4",
+		MaxTokens: 100,
+		Messages: []MessageParam{
+			{Role: "user", Content: json.RawMessage(`"并行调用两个工具"`)},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Stream failed: %v", err)
+	}
+	defer reader.Close()
+
+	toolStarts := map[string]bool{}
+	stopCount := map[int]int{}
+	for {
+		ev, err := reader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("Next failed: %v", err)
+		}
+		switch ev.Type {
+		case EventContentBlockStart:
+			var bs struct {
+				Index        int          `json:"index"`
+				ContentBlock ContentBlock `json:"content_block"`
+			}
+			if err := json.Unmarshal(ev.Data, &bs); err == nil && bs.ContentBlock.Type == "tool_use" {
+				toolStarts[bs.ContentBlock.ID] = true
+			}
+		case EventContentBlockStop:
+			var ss struct {
+				Index int `json:"index"`
+			}
+			if err := json.Unmarshal(ev.Data, &ss); err == nil {
+				stopCount[ss.Index]++
+			}
+		}
+	}
+
+	// 两个并行工具调用都必须出现。
+	for _, id := range []string{"call_a", "call_b"} {
+		if !toolStarts[id] {
+			t.Errorf("并行工具调用 %s 丢失，已收到: %v", id, toolStarts)
+		}
+	}
+	// 同一个 index 不应被 stop 两次。
+	for idx, n := range stopCount {
+		if n > 1 {
+			t.Errorf("content_block_stop 重复发送: index=%d 出现 %d 次", idx, n)
+		}
+	}
+}

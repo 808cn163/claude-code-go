@@ -3,7 +3,10 @@
 // cross-package coordination. Do NOT add non-stdlib imports.
 package types
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Role corresponds to the Anthropic API message role.
 type Role string
@@ -43,6 +46,30 @@ type ContentBlock struct {
 	// thinking
 	Thinking  *string `json:"thinking,omitempty"`
 	Signature *string `json:"signature,omitempty"`
+}
+
+// MarshalJSON 保证 tool_use 块始终带 input 字段。
+//
+// Input 为 nil 或空 map 时，`omitempty` 会把 input 字段整个省略；部分严格的上游
+// 网关（serde 反序列化，如第三方 ANTHROPIC_BASE_URL 中转）会因此返回 422：
+// "missing field `input`"。故对 tool_use 单独构造，令 input 恒为 JSON 对象；
+// 其它类型的块仍走默认序列化，不受影响。
+func (c ContentBlock) MarshalJSON() ([]byte, error) {
+	if c.Type == ContentTypeToolUse {
+		input := c.Input
+		if input == nil {
+			input = map[string]any{}
+		}
+		return json.Marshal(struct {
+			Type  ContentBlockType `json:"type"`
+			ID    *string          `json:"id,omitempty"`
+			Name  *string          `json:"name,omitempty"`
+			Input map[string]any   `json:"input"`
+		}{c.Type, c.ID, c.Name, input})
+	}
+	// 别名类型：避免 Marshal 时递归调用本方法。
+	type contentBlock ContentBlock
+	return json.Marshal(contentBlock(c))
 }
 
 // ImageSource describes the source of an image content block.

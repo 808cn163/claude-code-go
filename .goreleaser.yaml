@@ -28,7 +28,7 @@ builds:
       # override point declared in internal/bootstrap/bootstrap.go). Before
       # v0.8.0 this targeted a nonexistent `main.version`, so released
       # binaries all printed the build-time default "0.1.0".
-      - -X github.com/tunsuy/claude-code-go/internal/bootstrap.appVersion={{.Version}}
+      - -X github.com/808cn163/claude-code-go/internal/bootstrap.appVersion={{.Version}}
 
 archives:
   - id: default
@@ -93,13 +93,13 @@ release:
 
     ```bash
     # Via Go
-    go install github.com/tunsuy/claude-code-go/cmd/claude@{{ .Tag }}
+    go install github.com/808cn163/claude-code-go/cmd/claude@{{ .Tag }}
 
     # Or download the binary below
     ```
   footer: |
     ---
-    **Full Changelog**: https://github.com/tunsuy/claude-code-go/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/808cn163/claude-code-go/compare/{{ .PreviousTag }}...{{ .Tag }}
 
 # NOTE: no `brews:` section — the previously configured tunsuy/homebrew-tap
 # repository does not exist and HOMEBREW_TAP_TOKEN is not set, so every

@@ -1,4 +1,4 @@
-module github.com/tunsuy/claude-code-go
+module github.com/808cn163/claude-code-go
 
 go 1.21
 

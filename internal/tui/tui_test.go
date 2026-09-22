@@ -9,10 +9,10 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/tunsuy/claude-code-go/internal/commands"
-	"github.com/tunsuy/claude-code-go/internal/engine"
-	"github.com/tunsuy/claude-code-go/internal/state"
-	"github.com/tunsuy/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/internal/commands"
+	"github.com/808cn163/claude-code-go/internal/engine"
+	"github.com/808cn163/claude-code-go/internal/state"
+	"github.com/808cn163/claude-code-go/pkg/types"
 )
 
 // ---------------------------------------------------------------------------
@@ -625,7 +625,7 @@ func TestApplyCommandResult_DisplayError(t *testing.T) {
 	if len(m2.messages) != 1 {
 		t.Fatalf("expected 1 error message, got %d", len(m2.messages))
 	}
-	if !strings.Contains(*m2.messages[0].Content[0].Text, "Error:") {
+	if !strings.Contains(*m2.messages[0].Content[0].Text, "错误：") {
 		t.Error("error prefix not found")
 	}
 }
@@ -857,8 +857,8 @@ func TestHandleSubmit_UnknownSlashCommand(t *testing.T) {
 	if len(m2.messages) != 1 {
 		t.Fatalf("expected 1 error message, got %d", len(m2.messages))
 	}
-	if !strings.Contains(*m2.messages[0].Content[0].Text, "Unknown command") {
-		t.Error("expected 'Unknown command' error message")
+	if !strings.Contains(*m2.messages[0].Content[0].Text, "未知命令") {
+		t.Error("expected '未知命令' error message")
 	}
 }
 
@@ -916,8 +916,8 @@ func TestSpinnerView(t *testing.T) {
 	if view == "" {
 		t.Error("spinner view should not be empty")
 	}
-	if !strings.Contains(view, "Thinking") {
-		t.Errorf("expected 'Thinking' in spinner view, got: %q", view)
+	if !strings.Contains(view, "思考中") {
+		t.Errorf("expected '思考中' in spinner view, got: %q", view)
 	}
 }
 
@@ -1057,7 +1057,7 @@ func TestView_Loading(t *testing.T) {
 	m.isLoading = true
 	m.showSpinner = true
 	v := m.View()
-	if !strings.Contains(v, "Thinking") {
+	if !strings.Contains(v, "思考中") {
 		t.Errorf("expected spinner in loading view, got: %q", v)
 	}
 }
@@ -1066,7 +1066,7 @@ func TestView_DialogCompact(t *testing.T) {
 	m := newTestModel()
 	m.activeDialog = dialogCompact
 	v := m.View()
-	if !strings.Contains(v, "Compact") {
+	if !strings.Contains(v, "是否压缩会话") {
 		t.Errorf("expected compact dialog in view, got: %q", v)
 	}
 }
@@ -1075,7 +1075,7 @@ func TestView_DialogExit(t *testing.T) {
 	m := newTestModel()
 	m.activeDialog = dialogExit
 	v := m.View()
-	if !strings.Contains(v, "Exit") {
+	if !strings.Contains(v, "退出 Claude Code") {
 		t.Errorf("expected exit dialog in view, got: %q", v)
 	}
 }
@@ -1086,15 +1086,15 @@ func TestView_DialogPermission(t *testing.T) {
 	m.activeDialog = dialogPermission
 	m.permReq = &d
 	v := m.View()
-	// Check for new dialog format: "Bash command" title and options
-	if !strings.Contains(v, "Bash command") {
-		t.Errorf("expected 'Bash command' in permission dialog view, got: %q", v)
+	// Check for new dialog format: "Bash 命令" title and options
+	if !strings.Contains(v, "Bash 命令") {
+		t.Errorf("expected 'Bash 命令' in permission dialog view, got: %q", v)
 	}
-	if !strings.Contains(v, "Do you want to proceed?") {
-		t.Errorf("expected 'Do you want to proceed?' in permission dialog view, got: %q", v)
+	if !strings.Contains(v, "是否继续执行？") {
+		t.Errorf("expected '是否继续执行？' in permission dialog view, got: %q", v)
 	}
-	if !strings.Contains(v, "Yes") {
-		t.Errorf("expected 'Yes' option in permission dialog view, got: %q", v)
+	if !strings.Contains(v, "允许") {
+		t.Errorf("expected '允许' option in permission dialog view, got: %q", v)
 	}
 }
 
@@ -1438,7 +1438,7 @@ func TestRenderThinkingBlock(t *testing.T) {
 	// Long thinking (>3 lines) — truncated.
 	long := "a\nb\nc\nd\ne"
 	out2 := renderThinkingBlock(long, theme)
-	if !strings.Contains(out2, "truncated") {
+	if !strings.Contains(out2, "已截断") {
 		t.Error("long thinking block should say truncated")
 	}
 }

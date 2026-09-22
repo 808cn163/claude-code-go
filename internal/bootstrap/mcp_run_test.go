@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tunsuy/claude-code-go/internal/config"
+	"github.com/808cn163/claude-code-go/internal/config"
 )
 
 // Shared fixtures for the mcp_*_test.go files: a canned health checker, a

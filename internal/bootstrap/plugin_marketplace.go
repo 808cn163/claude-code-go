@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tunsuy/claude-code-go/internal/config"
+	"github.com/808cn163/claude-code-go/internal/config"
 )
 
 // The `claude plugin marketplace` subcommands (add/list/remove/update),

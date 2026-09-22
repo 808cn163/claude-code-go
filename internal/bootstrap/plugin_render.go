@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tunsuy/claude-code-go/internal/config"
+	"github.com/808cn163/claude-code-go/internal/config"
 )
 
 // Rendering for `plugin list` and `plugin marketplace list` — text and JSON,

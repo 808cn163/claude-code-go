@@ -138,3 +138,26 @@ type StreamReader interface {
 
 <!-- AUTO-GENERATED ABOVE — DO NOT EDIT -->
 <!-- MANUAL NOTES BELOW — preserved across regeneration -->
+
+## Design Notes
+
+OpenAI 兼容客户端（`openai_client.go` / `openai_stream.go`）与 Anthropic Messages 协议存在
+结构性差异，以下几处是**刻意的取舍**，改动前请先确认协议约束：
+
+- **thinking 块不回传**：Chat Completions 协议没有对应概念。早期实现把它拼成
+  `[Thinking]: ...` 作为独立 assistant 消息发回，既会把思考内容当成正文污染上下文，
+  也会产生**连续的 assistant 消息**（违反 OpenAI 的消息交替约束）。现直接丢弃。
+- **同一消息内 `tool_result` 必须排在文本之前**：否则转换出的 `role=tool` 会被
+  `role=user` 隔断，破坏「`role=tool` 必须紧跟 `assistant(tool_calls)`」的硬约束，
+  严格实现（如部分第三方网关）会直接报错。故非 assistant 分支分两趟输出。
+- **请求体的 `tool_calls` 不带 `index`**：`index` 只属于流式响应的 delta（用于区分并行
+  工具调用），请求体中出现会被严格实现拒绝；结构体上以 `omitempty` 保证。
+- **流式必须遍历全部 `delta.tool_calls`**：并行工具调用会在同一个 delta 中携带多个
+  `index`，只取 `[0]` 会整体丢失其余调用。
+- **`arguments` 需校验 JSON 合法性**：模型偶发非法 JSON 时不能直接塞进 `json.RawMessage`
+  （其要求内容合法），否则后续整体序列化失败并污染整个会话历史，故回退为空对象。
+- **content_block_stop 需去重**：`finish_reason` 与 `[DONE]` 两处都会触发收尾，
+  用 `blocksStopped` 标志保证同一 index 只 stop 一次；工具块按 index 升序发出，
+  避免 map 遍历顺序随机导致事件乱序。
+
+回归测试见 `openai_client_test.go` 末尾的四个 `TestOpenAI*` 用例。

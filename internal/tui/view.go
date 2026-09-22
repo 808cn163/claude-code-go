@@ -66,15 +66,15 @@ func (m AppModel) View() string {
 	case dialogCompact:
 		sb.WriteString("\n")
 		sb.WriteString(renderConfirmDialog(
-			"Compact conversation?",
-			"This will summarise the history and reduce context usage.",
+			"是否压缩会话？",
+			"这将总结历史记录以减少上下文占用。",
 			m.termWidth, m.theme,
 		))
 	case dialogExit:
 		sb.WriteString("\n")
 		sb.WriteString(renderConfirmDialog(
-			"Exit Claude Code?",
-			"Press y to confirm, n to cancel.",
+			"退出 Claude Code？",
+			"按 y 确认，按 n 取消。",
 			m.termWidth, m.theme,
 		))
 	}

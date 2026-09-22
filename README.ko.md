@@ -10,13 +10,13 @@
 
 <p align="center">
   <a href="https://golang.org/dl/"><img src="https://img.shields.io/badge/go-1.21+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go Version"></a>
-  <a href="https://goreportcard.com/report/github.com/tunsuy/claude-code-go"><img src="https://goreportcard.com/badge/github.com/tunsuy/claude-code-go?style=flat-square" alt="Go Report Card"></a>
-  <a href="https://codecov.io/gh/tunsuy/claude-code-go"><img src="https://codecov.io/gh/tunsuy/claude-code-go/branch/main/graph/badge.svg?style=flat-square" alt="커버리지"></a>
-  <a href="https://pkg.go.dev/github.com/tunsuy/claude-code-go"><img src="https://pkg.go.dev/badge/github.com/tunsuy/claude-code-go.svg" alt="Go Reference"></a>
-  <a href="https://github.com/tunsuy/claude-code-go/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/tunsuy/claude-code-go/ci.yml?branch=main&style=flat-square&logo=github&label=CI" alt="CI"></a>
-  <a href="https://github.com/tunsuy/claude-code-go/releases"><img src="https://img.shields.io/github/v/release/tunsuy/claude-code-go?style=flat-square&logo=github" alt="Release"></a>
+  <a href="https://goreportcard.com/report/github.com/808cn163/claude-code-go"><img src="https://goreportcard.com/badge/github.com/808cn163/claude-code-go?style=flat-square" alt="Go Report Card"></a>
+  <a href="https://codecov.io/gh/808cn163/claude-code-go"><img src="https://codecov.io/gh/808cn163/claude-code-go/branch/main/graph/badge.svg?style=flat-square" alt="커버리지"></a>
+  <a href="https://pkg.go.dev/github.com/808cn163/claude-code-go"><img src="https://pkg.go.dev/badge/github.com/808cn163/claude-code-go.svg" alt="Go Reference"></a>
+  <a href="https://github.com/808cn163/claude-code-go/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/808cn163/claude-code-go/ci.yml?branch=main&style=flat-square&logo=github&label=CI" alt="CI"></a>
+  <a href="https://github.com/808cn163/claude-code-go/releases"><img src="https://img.shields.io/github/v/release/808cn163/claude-code-go?style=flat-square&logo=github" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License"></a>
-  <a href="https://github.com/tunsuy/claude-code-go/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome"></a>
+  <a href="https://github.com/808cn163/claude-code-go/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome"></a>
 </p>
 
 <p align="center">
@@ -110,7 +110,7 @@ Claude Code Go는 6개 계층으로 구성됩니다:
 ### 소스에서 빌드
 
 ```bash
-git clone https://github.com/tunsuy/claude-code-go.git
+git clone https://github.com/808cn163/claude-code-go.git
 cd claude-code-go
 make build
 # 바이너리는 ./bin/claude에 위치합니다
@@ -125,7 +125,7 @@ export PATH="$PATH:$(pwd)/bin"
 ### `go install` 사용
 
 ```bash
-go install github.com/tunsuy/claude-code-go/cmd/claude@latest
+go install github.com/808cn163/claude-code-go/cmd/claude@latest
 ```
 
 ## 빠른 시작

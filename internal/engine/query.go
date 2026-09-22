@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tunsuy/claude-code-go/internal/api"
-	"github.com/tunsuy/claude-code-go/internal/compact"
-	"github.com/tunsuy/claude-code-go/internal/msgqueue"
-	"github.com/tunsuy/claude-code-go/internal/tools"
-	"github.com/tunsuy/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/internal/api"
+	"github.com/808cn163/claude-code-go/internal/compact"
+	"github.com/808cn163/claude-code-go/internal/msgqueue"
+	"github.com/808cn163/claude-code-go/internal/tools"
+	"github.com/808cn163/claude-code-go/pkg/types"
 )
 
 // defaultMsgBufSize is the default channel buffer for Msg events.

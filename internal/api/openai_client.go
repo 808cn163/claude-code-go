@@ -212,7 +212,6 @@ func (c *openaiClient) convertMessage(msg MessageParam) []openaiMessage {
 	if msg.Role == "assistant" {
 		var combinedText string
 		var toolCalls []openaiToolCall
-		var thinkingText string
 
 		for _, block := range blocks {
 			switch block.Type {
@@ -222,23 +221,26 @@ func (c *openaiClient) convertMessage(msg MessageParam) []openaiMessage {
 				}
 				combinedText += block.Text
 			case "tool_use":
-				inputJSON, _ := json.Marshal(block.Input)
+				// block.Input 本身已是 JSON 片段。若模型曾产出非法 JSON，
+				// 直接透传会让后续整体序列化失败，故校验后回退为空对象。
+				args := block.Input
+				if len(args) == 0 || !json.Valid(args) {
+					args = json.RawMessage("{}")
+				}
+				// 注意：请求体的 tool_calls 不带 index 字段
+				// （index 只属于流式响应的 delta）。
 				toolCalls = append(toolCalls, openaiToolCall{
-					Index: len(toolCalls),
-					ID:    block.ID,
-					Type:  "function",
+					ID:   block.ID,
+					Type: "function",
 					Function: openaiToolCallFunction{
 						Name:      block.Name,
-						Arguments: string(inputJSON),
+						Arguments: string(args),
 					},
 				})
 			case "thinking":
-				if block.Thinking != "" {
-					if thinkingText != "" {
-						thinkingText += "\n"
-					}
-					thinkingText = fmt.Sprintf("[Thinking]: %s", block.Thinking)
-				}
+				// Anthropic 的 thinking 在 Chat Completions 协议中没有对应概念。
+				// 这里刻意丢弃：若回传，思考内容会被当作助手正文，且会生成连续的
+				// assistant 消息，违反 OpenAI 的消息交替约束。
 			}
 		}
 
@@ -258,45 +260,43 @@ func (c *openaiClient) convertMessage(msg MessageParam) []openaiMessage {
 			result = append(result, assistantMsg)
 		}
 
-		// Add thinking as a separate message if present
-		if thinkingText != "" {
-			result = append(result, openaiMessage{
-				Role:    "assistant",
-				Content: &thinkingText,
-			})
-		}
-
 		return result
 	}
 
-	// For user messages, process each block
+	// 非 assistant 消息按协议要求分两趟输出：
+	// 同一条消息内的 tool_result 必须先于文本，否则 role=tool 会被 role=user 隔断，
+	// 破坏「role=tool 必须紧跟 assistant(tool_calls)」的约束，严格实现会直接报错。
+	// 第一趟：tool_result。
 	for _, block := range blocks {
-		switch block.Type {
-		case "text":
-			text := block.Text
-			result = append(result, openaiMessage{
-				Role:    c.convertRole(msg.Role),
-				Content: &text,
-			})
-		case "tool_result":
-			// Tool result from user
-			// Content can be a string or an array of content blocks
-			contentStr := extractToolResultContent(block.Content)
-			toolCallID := block.ToolUseID
-			// Debug: log tool result conversion.
-			if c.debugLogger.Enabled() {
-				preview := contentStr
-				if len(preview) > 200 {
-					preview = preview[:200]
-				}
-				c.debugLogger.Logf("tool_result: ToolUseID=%q, ContentLen=%d, Preview=%q", toolCallID, len(contentStr), preview)
-			}
-			result = append(result, openaiMessage{
-				Role:       "tool",
-				Content:    &contentStr,
-				ToolCallID: toolCallID,
-			})
+		if block.Type != "tool_result" {
+			continue
 		}
+		// Content 可以是字符串，也可以是内容块数组。
+		contentStr := extractToolResultContent(block.Content)
+		if c.debugLogger.Enabled() {
+			preview := contentStr
+			if len(preview) > 200 {
+				preview = preview[:200]
+			}
+			c.debugLogger.Logf("tool_result: ToolUseID=%q, ContentLen=%d, Preview=%q", block.ToolUseID, len(contentStr), preview)
+		}
+		result = append(result, openaiMessage{
+			Role:       "tool",
+			Content:    &contentStr,
+			ToolCallID: block.ToolUseID,
+		})
+	}
+
+	// 第二趟：文本（跳过空块，避免产生 content 为空的消息）。
+	for _, block := range blocks {
+		if block.Type != "text" || block.Text == "" {
+			continue
+		}
+		text := block.Text
+		result = append(result, openaiMessage{
+			Role:    c.convertRole(msg.Role),
+			Content: &text,
+		})
 	}
 
 	return result
@@ -399,9 +399,17 @@ func (c *openaiClient) convertToMessageResponse(resp *openaiChatCompletionRespon
 
 		// Convert tool calls
 		for _, tc := range choice.Message.ToolCalls {
-			var input json.RawMessage
+			// arguments 是 JSON 字符串，需转成对象的 JSON 片段。
+			// 模型偶发非法 JSON 时不能直接透传：json.RawMessage 要求内容合法，
+			// 否则后续整体序列化会失败，污染整个会话历史。
+			input := json.RawMessage("{}")
 			if tc.Function.Arguments != "" {
-				input = json.RawMessage(tc.Function.Arguments)
+				if json.Valid([]byte(tc.Function.Arguments)) {
+					input = json.RawMessage(tc.Function.Arguments)
+				} else {
+					c.debugLogger.Logf("tool_call %q: arguments 不是合法 JSON，已回退为空对象: %q",
+						tc.ID, tc.Function.Arguments)
+				}
 			}
 			msgResp.Content = append(msgResp.Content, ContentBlock{
 				Type:  "tool_use",

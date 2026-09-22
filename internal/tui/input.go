@@ -28,7 +28,12 @@ type InputModel struct {
 // NewInput creates a new InputModel.
 func NewInput(vimEnabled bool) InputModel {
 	ta := textarea.New()
-	ta.Placeholder = "Message Claude…"
+	// 注意：占位符必须以 ASCII 字符（此处为 "["）开头。
+	// bubbles v0.20.0 的 textarea.placeholderView 用 plines[0][0]（字节索引）
+	// 取出首字符并 string(byte) 转换，若首字符是多字节 UTF-8（如中文），
+	// 会被拆成乱码（"输" E8 BE 93 → "è" + 0xBE + U+0093）。
+	// 首字符为 ASCII 即可完全规避该上游缺陷，后续中文均能正常渲染。
+	ta.Placeholder = "[输入消息…]"
 	ta.ShowLineNumbers = false
 	ta.SetHeight(3)
 	ta.Focus()

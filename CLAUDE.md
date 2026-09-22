@@ -16,7 +16,7 @@
 
 Claude Code Go is a **full Go rewrite** of Claude Code (originally TypeScript/Bun). It is an agentic AI coding assistant that runs in the terminal. The entire codebase (~7,000 lines of production code + tests) was built using **AI coding tool's multi-agent parallel development mode** — each architectural layer was implemented by a dedicated AI Agent (e.g., Agent-Infra, Agent-Core) on isolated Git Worktree branches, coordinated by PM Agent, reviewed by Tech Lead Agent, and tested by QA Agent. **Zero human-written production code**.
 
-- **Module**: `github.com/tunsuy/claude-code-go`
+- **Module**: `github.com/808cn163/claude-code-go`
 - **Go version**: 1.21+
 - **License**: MIT
 
@@ -90,7 +90,7 @@ import (
 
     "external/third-party/pkg" // Group 2: Third-party packages
 
-    "github.com/tunsuy/claude-code-go/internal/..." // Group 3: Internal packages
+    "github.com/808cn163/claude-code-go/internal/..." // Group 3: Internal packages
 )
 ```
 

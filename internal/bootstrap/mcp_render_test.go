@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tunsuy/claude-code-go/internal/config"
+	"github.com/808cn163/claude-code-go/internal/config"
 )
 
 // Byte-exact render tests against oracle fixtures (claude v2.1.261), captured

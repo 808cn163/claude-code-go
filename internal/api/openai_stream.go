@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 )
 
@@ -20,6 +21,7 @@ type openaiSSEReader struct {
 	textBlockStarted bool                         // whether we've sent content_block_start for text
 	toolCalls        map[int]*accumulatedToolCall // index -> accumulated tool call
 	toolBlockStarted map[int]bool                 // whether we've sent content_block_start for each tool
+	blocksStopped    bool                         // whether content_block_stop has already been emitted
 	inputUsage       int                          // accumulated from usage chunks
 	pendingEvents    []*StreamEvent               // events to return before processing more chunks
 	debugLogger      *DebugLogger                 // debug logger for SSE event tracing
@@ -78,18 +80,7 @@ func (r *openaiSSEReader) Next() (*StreamEvent, error) {
 		if data == "[DONE]" {
 			r.debugLogger.LogSSEEvent("DONE", "[DONE]")
 			r.done = true
-			// Send content_block_stop for text if we started one
-			if r.textBlockStarted {
-				r.pendingEvents = append(r.pendingEvents, r.createContentBlockStopEvent(0))
-			}
-			// Send content_block_stop for each tool block
-			for toolIndex := range r.toolBlockStarted {
-				blockIndex := toolIndex + 1
-				if !r.textBlockStarted {
-					blockIndex = toolIndex
-				}
-				r.pendingEvents = append(r.pendingEvents, r.createContentBlockStopEvent(blockIndex))
-			}
+			r.sendBlockStops()
 			// Send message_stop event
 			r.pendingEvents = append(r.pendingEvents, &StreamEvent{
 				Type: EventMessageStop,
@@ -146,18 +137,7 @@ func (r *openaiSSEReader) Next() (*StreamEvent, error) {
 
 			// Check for finish
 			if choice.FinishReason != "" {
-				// Send content_block_stop for text if we started one
-				if r.textBlockStarted {
-					r.pendingEvents = append(r.pendingEvents, r.createContentBlockStopEvent(0))
-				}
-				// Send content_block_stop for each tool block
-				for toolIndex := range r.toolBlockStarted {
-					blockIndex := toolIndex + 1
-					if !r.textBlockStarted {
-						blockIndex = toolIndex
-					}
-					r.pendingEvents = append(r.pendingEvents, r.createContentBlockStopEvent(blockIndex))
-				}
+				r.sendBlockStops()
 				// Queue message_delta event
 				r.pendingEvents = append(r.pendingEvents, r.createMessageDeltaEvent(&choice))
 				// Return first pending event
@@ -178,9 +158,13 @@ func (r *openaiSSEReader) Next() (*StreamEvent, error) {
 				return ev, nil
 			}
 
-			// Process tool calls
+			// Process tool calls.
+			// 必须遍历全部：并行工具调用会在同一个 delta 中携带多个 index，
+			// 只处理 [0] 会让其余工具调用整体丢失。
 			if len(choice.Delta.ToolCalls) > 0 {
-				r.processToolCallDelta(&choice.Delta.ToolCalls[0])
+				for i := range choice.Delta.ToolCalls {
+					r.processToolCallDelta(&choice.Delta.ToolCalls[i])
+				}
 				if len(r.pendingEvents) > 0 {
 					retEv := r.pendingEvents[0]
 					r.pendingEvents = r.pendingEvents[1:]
@@ -202,6 +186,36 @@ func (r *openaiSSEReader) Next() (*StreamEvent, error) {
 		return nil, err
 	}
 	return nil, io.EOF
+}
+
+// sendBlockStops 发出所有尚未收尾的 content_block_stop 事件。
+//
+// finish_reason 与 [DONE] 两处都会触发收尾，故用一个标志去重，
+// 否则同一个 index 会被 stop 两次；工具块按 index 升序发出，
+// 避免 map 遍历顺序随机导致事件乱序。
+func (r *openaiSSEReader) sendBlockStops() {
+	if r.blocksStopped {
+		return
+	}
+	r.blocksStopped = true
+
+	if r.textBlockStarted {
+		r.pendingEvents = append(r.pendingEvents, r.createContentBlockStopEvent(0))
+	}
+
+	indices := make([]int, 0, len(r.toolBlockStarted))
+	for toolIndex := range r.toolBlockStarted {
+		indices = append(indices, toolIndex)
+	}
+	sort.Ints(indices)
+
+	for _, toolIndex := range indices {
+		blockIndex := toolIndex + 1
+		if !r.textBlockStarted {
+			blockIndex = toolIndex
+		}
+		r.pendingEvents = append(r.pendingEvents, r.createContentBlockStopEvent(blockIndex))
+	}
 }
 
 // createMessageStartEvent creates the initial message_start event.

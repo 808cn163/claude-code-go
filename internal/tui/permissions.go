@@ -35,7 +35,7 @@ func newPermissionDialog(msg PermissionRequestMsg) PermissionDialog {
 	// Extract project name from path for display
 	projectName := filepath.Base(msg.ProjectPath)
 	if projectName == "" || projectName == "." {
-		projectName = "this project"
+		projectName = "本项目"
 	}
 
 	return PermissionDialog{
@@ -45,9 +45,9 @@ func newPermissionDialog(msg PermissionRequestMsg) PermissionDialog {
 		input:       msg.Input,
 		projectPath: msg.ProjectPath,
 		options: []string{
-			"Yes",
-			fmt.Sprintf("Yes, and always allow access to %s/ from this project", projectName),
-			"No",
+			"允许",
+			fmt.Sprintf("允许，并且本项目今后始终允许访问 %s/", projectName),
+			"拒绝",
 		},
 		cursor: 0,
 		respFn: msg.RespFn,
@@ -124,7 +124,7 @@ func (d PermissionDialog) View(width int, theme Theme) string {
 	sb.WriteString("\n")
 
 	// Question prompt
-	sb.WriteString("Do you want to proceed?\n")
+	sb.WriteString("是否继续执行？\n")
 
 	// Options with numbered prefix (matching original style)
 	for i, opt := range d.options {
@@ -139,7 +139,7 @@ func (d PermissionDialog) View(width int, theme Theme) string {
 
 	sb.WriteString("\n")
 	// Footer hints (matching original: Esc to cancel · Tab to amend · ctrl+e to explain)
-	sb.WriteString(mutedStyle(theme).Render("Esc to cancel · Tab to amend · ctrl+e to explain"))
+	sb.WriteString(mutedStyle(theme).Render("Esc 取消 · Tab 修改 · ctrl+e 解释"))
 
 	inner := sb.String()
 	maxW := width - 4
@@ -153,15 +153,15 @@ func (d PermissionDialog) View(width int, theme Theme) string {
 func formatToolTitle(toolName string) string {
 	switch strings.ToLower(toolName) {
 	case "bash", "shell":
-		return "Bash command"
+		return "Bash 命令"
 	case "write", "file_write":
-		return "Write file"
+		return "写入文件"
 	case "edit", "file_edit":
-		return "Edit file"
+		return "编辑文件"
 	case "read", "file_read":
-		return "Read file"
+		return "读取文件"
 	default:
-		return toolName + " command"
+		return toolName + " 命令"
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/tunsuy/claude-code-go/internal/agenttype"
+	"github.com/808cn163/claude-code-go/internal/agenttype"
 )
 
 // TestMain sets up the test environment.

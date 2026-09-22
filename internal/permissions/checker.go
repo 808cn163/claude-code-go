@@ -11,9 +11,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tunsuy/claude-code-go/internal/hooks"
-	"github.com/tunsuy/claude-code-go/internal/tools"
-	"github.com/tunsuy/claude-code-go/pkg/types"
+	"github.com/808cn163/claude-code-go/internal/hooks"
+	"github.com/808cn163/claude-code-go/internal/tools"
+	"github.com/808cn163/claude-code-go/pkg/types"
 )
 
 // Checker is the top-level permission pipeline interface.
