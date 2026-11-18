@@ -62,6 +62,8 @@ func headlessRun(
 		QuerySource:    "foreground",
 		MaxTurns:       f.maxTurns,
 		FallbackModel:  f.fallbackModel,
+		// thinking 与 claude-cli 对齐（adaptive）。
+		Thinking: "adaptive",
 	}
 
 	if f.systemPrompt != "" {
@@ -69,6 +71,14 @@ func headlessRun(
 			Parts: []engine.SystemPromptPart{
 				{Text: f.systemPrompt},
 			},
+		}
+	} else {
+		// 默认注入与 claude-cli 对齐的 system 提示词块
+		// （billing-header + SDK 声明 + 主提示词，含 cache_control）。
+		cwd, _ := os.Getwd()
+		model := container.AppStateStore.GetState().MainLoopModel.ModelID
+		params.SystemPrompt = engine.SystemPrompt{
+			Parts: engine.RenderClaudeCliSystemPrompt(cwd, model),
 		}
 	}
 
