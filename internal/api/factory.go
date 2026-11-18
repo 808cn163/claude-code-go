@@ -20,6 +20,7 @@ const (
 type ClientConfig struct {
 	Provider       Provider
 	APIKey         string
+	AuthToken      string // ANTHROPIC_AUTH_TOKEN → Authorization: Bearer (direct provider)
 	BaseURL        string
 	MaxRetries     int
 	TimeoutSeconds int
@@ -82,6 +83,7 @@ func NewClient(cfg ClientConfig, httpClient *http.Client) (Client, error) {
 	case ProviderDirect, "":
 		return &directClient{
 			apiKey:     cfg.APIKey,
+			authToken:  cfg.AuthToken,
 			baseURL:    baseURL,
 			httpClient: httpClient,
 			headers:    headers,
@@ -102,6 +104,7 @@ func NewClient(cfg ClientConfig, httpClient *http.Client) (Client, error) {
 	default:
 		return &directClient{
 			apiKey:     cfg.APIKey,
+			authToken:  cfg.AuthToken,
 			baseURL:    baseURL,
 			httpClient: httpClient,
 			headers:    headers,
