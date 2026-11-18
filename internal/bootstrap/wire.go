@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/808cn163/claude-code-go/internal/agentctx"
 	"github.com/808cn163/claude-code-go/internal/agenttype"
@@ -47,6 +48,9 @@ type ContainerOptions struct {
 	Verbose       bool
 	Debug         bool
 	DebugFile     string // File path for debug log output (empty = stderr when Debug is true)
+	// Headless marks non-interactive (-p) mode: no TUI is attached, so
+	// permission asks are downgraded to deny instead of blocking forever.
+	Headless bool
 }
 
 // AppContainer holds all wired application dependencies.
@@ -76,6 +80,9 @@ type AppContainer struct {
 	MsgQueue *msgqueue.MessageQueue
 	// QueryGuard is the query dispatch guard (three-state machine).
 	QueryGuard *msgqueue.QueryGuard
+	// PermChecker is the HIL permission checker (mirrors the engine's instance;
+	// exposed so post-wiring flag application can sync the context snapshot).
+	PermChecker permissions.Checker
 	// AgentProfiles holds all registered agent type profiles (built-in + custom).
 	AgentProfiles *agenttype.Registry
 	// MemoryStore is the project's auto-memory store (may be nil).
@@ -134,8 +141,14 @@ func BuildContainer(opts ContainerOptions) (*AppContainer, error) {
 
 	// ── Phase 7: Permission checker (HIL support) ────────────────────────────
 	// Create permission channels for TUI ↔ Engine communication.
-	askCh := make(chan permissions.AskRequest, 1)
-	respCh := make(chan permissions.AskResponse, 1)
+	// Headless（-p）模式没有 TUI 消费 ask 请求，不接通道，
+	// 让 PermissionAsk 走 nil-channel 路径降级为 deny，避免永久阻塞。
+	var askCh chan permissions.AskRequest
+	var respCh chan permissions.AskResponse
+	if !opts.Headless {
+		askCh = make(chan permissions.AskRequest, 1)
+		respCh = make(chan permissions.AskResponse, 1)
+	}
 
 	// Build the permission checker with the tool registry and channels.
 	permChecker := permissions.NewChecker(permissions.CheckerConfig{
@@ -163,6 +176,7 @@ func BuildContainer(opts ContainerOptions) (*AppContainer, error) {
 		Client:            apiClient,
 		Registry:          reg,
 		Model:             model,
+		MaxTokens:         resolveMaxOutputTokens(),
 		PermissionChecker: permChecker,
 		StopHooks:         stopHooks,
 		MsgQueue:          mq,
@@ -196,6 +210,7 @@ func BuildContainer(opts ContainerOptions) (*AppContainer, error) {
 		AgentEventCh:     agentEventCh,
 		MsgQueue:         mq,
 		QueryGuard:       qg,
+		PermChecker:      permChecker,
 		AgentProfiles:    agentProfiles,
 		MemoryStore:      memoryStore,
 	}, nil
@@ -206,6 +221,7 @@ func BuildContainer(opts ContainerOptions) (*AppContainer, error) {
 func BuildHeadlessContainer(opts ContainerOptions) (*AppContainer, error) {
 	// Headless mode uses the same wiring path; any optimisations (skipping
 	// MCP init, etc.) can be added here in future iterations.
+	opts.Headless = true
 	return BuildContainer(opts)
 }
 
@@ -701,6 +717,9 @@ func buildAPIClient(settings *config.LayeredSettings, apiKey string, opts Contai
 		Debug:     opts.Debug,
 		DebugFile: opts.DebugFile,
 	}
+	// ANTHROPIC_AUTH_TOKEN → Authorization: Bearer（对齐 claude-cli，
+	// 且优先于 x-api-key 路径）。
+	cfg.AuthToken = os.Getenv("ANTHROPIC_AUTH_TOKEN")
 	if settings.Merged != nil {
 		if settings.Merged.BaseURL != "" {
 			cfg.BaseURL = settings.Merged.BaseURL
@@ -719,6 +738,17 @@ func buildAPIClient(settings *config.LayeredSettings, apiKey string, opts Contai
 		// Bedrock/Vertex detection via env is handled inside api.NewClient.
 	}
 	return api.NewClient(cfg, nil)
+}
+
+// resolveMaxOutputTokens returns the engine MaxTokens from
+// CLAUDE_CODE_MAX_OUTPUT_TOKENS, mirroring claude-cli's default of 32000.
+func resolveMaxOutputTokens() int {
+	if v := os.Getenv("CLAUDE_CODE_MAX_OUTPUT_TOKENS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 32000
 }
 
 // resolveModel returns the active model, checking (in order):
@@ -788,4 +818,11 @@ func applyPermissionFlags(container *AppContainer, f *rootFlags) {
 		prev.ToolPermissionContext = ctx
 		return prev
 	})
+
+	// 同步 checker 的上下文快照：checker 在容器构造时拿到的是旧快照，
+	// --dangerously-skip-permissions 等标志在构造之后才应用，必须显式同步。
+	if container.PermChecker != nil {
+		container.PermChecker.UpdatePermCtx(
+			container.AppStateStore.GetState().ToolPermissionContext)
+	}
 }
