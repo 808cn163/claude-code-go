@@ -149,8 +149,22 @@ func (c *openaiClient) convertToOpenAIRequest(req *MessageRequest) *openaiChatCo
 		Stream:    req.Stream,
 	}
 
-	// Convert system message
-	if req.System != "" {
+	// Convert system message（数组形式优先，与 claude-cli 的 system 块拼接对齐）
+	if len(req.SystemBlocks) > 0 {
+		parts := make([]string, 0, len(req.SystemBlocks))
+		for _, b := range req.SystemBlocks {
+			if b.Text != "" {
+				parts = append(parts, b.Text)
+			}
+		}
+		if len(parts) > 0 {
+			sysContent := joinStrings(parts, "\n\n")
+			openaiReq.Messages = append(openaiReq.Messages, openaiMessage{
+				Role:    "system",
+				Content: &sysContent,
+			})
+		}
+	} else if req.System != "" {
 		sysContent := req.System
 		openaiReq.Messages = append(openaiReq.Messages, openaiMessage{
 			Role:    "system",
