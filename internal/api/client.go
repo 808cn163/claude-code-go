@@ -57,15 +57,42 @@ type ToolSchema struct {
 	InputSchema json.RawMessage `json:"input_schema"`
 }
 
+// SystemBlock is one block of the system prompt (mirrors the Anthropic API
+// system array form). CacheControl mirrors cache_control on the last block.
+type SystemBlock struct {
+	Type         string `json:"type"`
+	Text         string `json:"text"`
+	CacheControl string `json:"cache_control,omitempty"`
+}
+
+// RequestMetadata mirrors the Anthropic API metadata field (user_id).
+type RequestMetadata struct {
+	UserID string `json:"user_id,omitempty"`
+}
+
+// ThinkingConfig mirrors the Anthropic API thinking field
+// ({type:"adaptive"} or {type:"enabled",budget_tokens:N}).
+type ThinkingConfig struct {
+	Type         string `json:"type"`
+	BudgetTokens int    `json:"budget_tokens,omitempty"`
+}
+
 // MessageRequest corresponds to the Anthropic Messages API request body.
 type MessageRequest struct {
 	Model          string         `json:"model"`
 	MaxTokens      int            `json:"max_tokens"`
 	Messages       []MessageParam `json:"messages"`
 	System         string         `json:"system,omitempty"`
-	Tools          []ToolSchema   `json:"tools,omitempty"`
-	Stream         bool           `json:"stream"`
-	ThinkingBudget int            `json:"thinking_budget_tokens,omitempty"`
+	// SystemBlocks, when non-empty, overrides System and is sent as the
+	// array form (with cache_control markers), matching claude-cli.
+	SystemBlocks  []SystemBlock     `json:"-"`
+	Tools         []ToolSchema      `json:"tools,omitempty"`
+	Stream        bool              `json:"stream"`
+	ThinkingBudget int             `json:"thinking_budget_tokens,omitempty"`
+	// Thinking, when non-nil, is sent as the thinking field (adaptive/enabled).
+	Thinking *ThinkingConfig `json:"thinking,omitempty"`
+	// Metadata, when non-nil, is sent as the metadata field (user_id).
+	Metadata *RequestMetadata `json:"metadata,omitempty"`
 	// QuerySource marks the request source for retry policy (foreground/background).
 	// Excluded from JSON serialisation.
 	QuerySource string `json:"-"`
@@ -88,6 +115,7 @@ var _ Client = (*directClient)(nil)
 // directClient implements Client using the Anthropic Direct API.
 type directClient struct {
 	apiKey     string
+	authToken  string // ANTHROPIC_AUTH_TOKEN → Authorization: Bearer
 	baseURL    string
 	httpClient *http.Client
 	headers    map[string]string
@@ -132,6 +160,24 @@ func (c *directClient) Complete(ctx context.Context, req *MessageRequest) (*Mess
 }
 
 func (c *directClient) buildRequest(ctx context.Context, req *MessageRequest) (*http.Request, error) {
+	// SystemBlocks（数组形式，含 cache_control）优先于 System 字符串。
+	if len(req.SystemBlocks) > 0 {
+		type shadowedRequest struct {
+			MessageRequest
+			System json.RawMessage `json:"system"`
+		}
+		blocks, err := json.Marshal(req.SystemBlocks)
+		if err != nil {
+			return nil, fmt.Errorf("api: marshal system blocks: %w", err)
+		}
+		sr := shadowedRequest{MessageRequest: *req, System: blocks}
+		return c.marshalAndBuild(ctx, &sr)
+	}
+	return c.marshalAndBuild(ctx, req)
+}
+
+// marshalAndBuild serialises req and builds the HTTP request with auth headers.
+func (c *directClient) marshalAndBuild(ctx context.Context, req any) (*http.Request, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("api: marshal request: %w", err)
@@ -142,9 +188,15 @@ func (c *directClient) buildRequest(ctx context.Context, req *MessageRequest) (*
 		return nil, fmt.Errorf("api: build request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("x-api-key", c.apiKey)
+	// 认证头对齐 claude-cli：ANTHROPIC_AUTH_TOKEN → Authorization: Bearer，
+	// 否则 ANTHROPIC_API_KEY → x-api-key。两者都没有时不发送认证头。
+	if c.authToken != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+c.authToken)
+	} else if c.apiKey != "" {
+		httpReq.Header.Set("x-api-key", c.apiKey)
+	}
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
-	httpReq.Header.Set("anthropic-beta", "interleaved-thinking-2025-05-14,max-tokens-3-5-sonnet-2024-07-15,token-counting-2024-11-01")
+	httpReq.Header.Set("anthropic-beta", "claude-code-20250219,interleaved-thinking-2025-05-14,context-management-2025-06-27,prompt-caching-scope-2026-01-05,effort-2025-11-24")
 	for k, v := range c.headers {
 		httpReq.Header.Set(k, v)
 	}
