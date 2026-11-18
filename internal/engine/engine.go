@@ -68,6 +68,9 @@ type QueryParams struct {
 	// Model overrides the engine's default model for this query.
 	// If empty, the engine's configured model is used.
 	Model string
+	// Thinking selects the thinking mode for the request: "adaptive" (default)
+	// or "disabled". Mirrors claude-cli's thinking field.
+	Thinking string
 }
 
 // TaskBudget defines an optional task-level output token budget.
