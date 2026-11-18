@@ -2,11 +2,14 @@ package engine
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -438,6 +441,18 @@ func (e *engineImpl) buildRequestWithModel(params QueryParams, messages []types.
 		}
 	}
 	systemStr := joinStrings(systemParts, "\n\n")
+	// 数组形式的 system 块（含 cache_control 标记），对齐 claude-cli 请求形态。
+	systemBlocks := make([]api.SystemBlock, 0, len(params.SystemPrompt.Parts))
+	for _, p := range params.SystemPrompt.Parts {
+		if p.Text == "" {
+			continue
+		}
+		systemBlocks = append(systemBlocks, api.SystemBlock{
+			Type:         "text",
+			Text:         p.Text,
+			CacheControl: p.CacheControl,
+		})
+	}
 
 	// Build tool schemas, excluding any tools listed in ExcludeTools.
 	allTools := e.registry.All()
@@ -462,15 +477,51 @@ func (e *engineImpl) buildRequestWithModel(params QueryParams, messages []types.
 		})
 	}
 
-	return &api.MessageRequest{
-		Model:       model,
-		MaxTokens:   maxTokens,
-		Messages:    apiMessages,
-		System:      systemStr,
-		Tools:       toolSchemas,
-		Stream:      true,
-		QuerySource: params.QuerySource,
-	}, nil
+	req := &api.MessageRequest{
+		Model:        model,
+		MaxTokens:    maxTokens,
+		Messages:     apiMessages,
+		System:       systemStr,
+		SystemBlocks: systemBlocks,
+		Tools:        toolSchemas,
+		Stream:       true,
+		QuerySource:  params.QuerySource,
+	}
+	// thinking: adaptive（与 claude-cli 对齐；仅 direct/anthropic 协议有意义）。
+	if params.Thinking != "" {
+		req.Thinking = &api.ThinkingConfig{Type: params.Thinking}
+	} else {
+		req.Thinking = &api.ThinkingConfig{Type: "adaptive"}
+	}
+	// metadata.user_id（与 claude-cli 对齐，供网关做请求识别）。
+	if uid := e.userID(); uid != "" {
+		req.Metadata = &api.RequestMetadata{UserID: uid}
+	}
+	return req, nil
+}
+
+// userID returns a stable per-device identifier for the metadata field.
+// Mirrors claude-cli's getOrCreateUserID (machine-scoped, persisted on disk).
+func (e *engineImpl) userID() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	path := filepath.Join(home, ".claude", "user-id")
+	if data, err := os.ReadFile(path); err == nil {
+		if id := strings.TrimSpace(string(data)); id != "" {
+			return id
+		}
+	}
+	// 32 hex chars（crypto/rand，无额外依赖）。
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return ""
+	}
+	id := hex.EncodeToString(b)
+	_ = os.MkdirAll(filepath.Dir(path), 0o700)
+	_ = os.WriteFile(path, []byte(id), 0o600)
+	return id
 }
 
 // buildAssistantMessage converts an api.MessageResponse into a types.Message.
