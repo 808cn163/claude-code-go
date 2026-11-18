@@ -31,6 +31,10 @@ type Checker interface {
 	// GetDenialCount returns the number of permission denials recorded in this
 	// session (used for automatic prompting-mode downgrade).
 	GetDenialCount() int
+
+	// UpdatePermCtx replaces the permission-context snapshot (e.g. after CLI
+	// flags like --dangerously-skip-permissions mutate the app state post-wiring).
+	UpdatePermCtx(ctx types.ToolPermissionContext)
 }
 
 // PermissionRequest bundles the parameters for a full permission flow.
@@ -96,6 +100,16 @@ func NewChecker(cfg CheckerConfig) Checker {
 		c.persist = *cfg.Persist
 	}
 	return c
+}
+
+// UpdatePermCtx replaces the checker's permission-context snapshot.
+// Callers that mutate permission state after construction (e.g. CLI flags
+// applied post-wiring such as --dangerously-skip-permissions) use this to
+// propagate the new mode/rules into in-flight permission checks.
+func (c *checker) UpdatePermCtx(ctx types.ToolPermissionContext) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.permCtx = ctx
 }
 
 // CanUseTool implements the permission decision chain without user interaction.
